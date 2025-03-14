@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tính Hiệu Suất & OWE lever Chuyền Mayok</title>
+    <title>Tính Hiệu Suất & OWE Chuyền May</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,6 +35,9 @@
         button:hover {
             background-color: #A0522D;
         }
+        canvas {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -42,7 +46,7 @@
         <label>Số sản phẩm hoàn thành:</label>
         <input type="number" id="products" placeholder="Nhập số sản phẩm">
         
-        <label>Thời gian chuẩn (phút/sản phẩm):</label>
+        <label>Thời gian chuẩn (giây/sản phẩm):</label>
         <input type="number" id="standardTime" placeholder="Nhập thời gian chuẩn">
         
         <label>Tổng thời gian làm việc (phút):</label>
@@ -51,62 +55,75 @@
         <label>Số công nhân:</label>
         <input type="number" id="workers" placeholder="Nhập số công nhân">
         
-        <button onclick="calculateEfficiency()">Tính Hiệu Suất</button>
-        <button onclick="calculateOWE1()">Tính OWE 1</button>
-        <button onclick="calculateOWE2()">Tính OWE 2</button>
-        <button onclick="calculateOWE3()">Tính OWE 3</button>
-        <button onclick="calculateTPT()">Tính TPT</button>
+        <button onclick="calculateAll()">Tính Tất Cả</button>
         
         <h3 id="result"></h3>
         <h3 id="owe1"></h3>
         <h3 id="owe2"></h3>
         <h3 id="owe3"></h3>
         <h3 id="tpt"></h3>
+        <h3 id="linePace"></h3>
     </div>
 
+    <canvas id="performanceChart"></canvas>
+
     <script>
-        function calculateEfficiency() {
+        function calculateAll() {
             let products = parseFloat(document.getElementById('products').value);
             let standardTime = parseFloat(document.getElementById('standardTime').value);
-            let totalTime = parseFloat(document.getElementById('totalTime').value);
+            let totalTime = parseFloat(document.getElementById('totalTime').value) * 60;
             let workers = parseFloat(document.getElementById('workers').value);
+            
             if (products > 0 && standardTime > 0 && totalTime > 0 && workers > 0) {
                 let efficiency = (products * standardTime) / (totalTime * workers) * 100;
                 document.getElementById('result').innerText = `Hiệu suất: ${efficiency.toFixed(2)}%`;
+                
+                let hoursWorked = totalTime / 3600;
+                let owe1 = products / (workers * hoursWorked);
+                document.getElementById('owe1').innerText = `OWE 1: ${owe1.toFixed(2)}`;
+                
+                let owe2 = (products * standardTime) / (workers * hoursWorked);
+                document.getElementById('owe2').innerText = `OWE 2: ${owe2.toFixed(2)}`;
+                
+                let owe3 = owe2 * (efficiency / 100);
+                document.getElementById('owe3').innerText = `OWE 3: ${owe3.toFixed(2)}`;
+                
+                let tpt = products * standardTime;
+                document.getElementById('tpt').innerText = `TPT: ${tpt.toFixed(2)} giây`;
+                
+                let linePace = standardTime / workers;
+                document.getElementById('linePace').innerText = `Nhịp chuyền: ${linePace.toFixed(2)} giây`;
+                
+                updateChart(efficiency, owe1, owe2, owe3, tpt, linePace);
             }
         }
 
-        function calculateOWE1() {
-            let products = parseFloat(document.getElementById('products').value);
-            let totalTime = parseFloat(document.getElementById('totalTime').value);
-            let workers = parseFloat(document.getElementById('workers').value);
-            let hoursWorked = totalTime / 60;
-            let owe1 = products / (workers * hoursWorked);
-            document.getElementById('owe1').innerText = `OWE 1: ${owe1.toFixed(2)}`;
-        }
+        function updateChart(efficiency, owe1, owe2, owe3, tpt, linePace) {
+            let ctx = document.getElementById('performanceChart').getContext('2d');
+            if (window.performanceChartInstance) {
+                window.performanceChartInstance.destroy();
+            }
+            window.performanceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Hiệu suất (%)', 'OWE 1', 'OWE 2', 'OWE 3', 'TPT (giây)', 'Nhịp chuyền (giây)'],
+                    datasets: [{
+                        label: 'Giá trị',
+                        data: [efficiency, owe1, owe2, owe3, tpt, linePace],
+                        backgroundColor: ['#FF5733', '#33FF57', '#3375FF', '#FF33A8', '#FFD700', '#8B4513']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
 
-        function calculateOWE2() {
-            let products = parseFloat(document.getElementById('products').value);
-            let standardTime = parseFloat(document.getElementById('standardTime').value);
-            let totalTime = parseFloat(document.getElementById('totalTime').value);
-            let workers = parseFloat(document.getElementById('workers').value);
-            let hoursWorked = totalTime / 60;
-            let owe2 = (products * standardTime) / (workers * hoursWorked);
-            document.getElementById('owe2').innerText = `OWE 2: ${owe2.toFixed(2)}`;
-        }
-
-        function calculateOWE3() {
-            let efficiency = parseFloat(document.getElementById('result').innerText.split(': ')[1]);
-            let owe2 = parseFloat(document.getElementById('owe2').innerText.split(': ')[1]);
-            let owe3 = owe2 * (efficiency / 100);
-            document.getElementById('owe3').innerText = `OWE 3: ${owe3.toFixed(2)}`;
-        }
-
-        function calculateTPT() {
-            let products = parseFloat(document.getElementById('products').value);
-            let standardTime = parseFloat(document.getElementById('standardTime').value);
-            let tpt = products * standardTime;
-            document.getElementById('tpt').innerText = `TPT: ${tpt.toFixed(2)} phút`;
+                    
+                }
+            });
         }
     </script>
 </body>
